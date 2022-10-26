@@ -26,7 +26,7 @@ pub struct LLM {
 #[derive(Clone)]
 enum LLMOutput {
     Full,
-    CompletionOnly,
+    TrimmedCompletionOnly,
 }
 
 impl LLM {
@@ -70,8 +70,8 @@ impl LLM {
                         "stop" => stop = value.split("\n").map(|s| String::from(s)).collect(),
                         "output" => output = match value.as_str() {
                             "full" => LLMOutput::Full,
-                            "completion_only" => LLMOutput::CompletionOnly,
-                            _ => Err(anyhow!("Invalid `output` in `llm` block, expecting `full` or `completion_only`"))?
+                            "trimmed_completion_only" => LLMOutput::TrimmedCompletionOnly,
+                            _ => Err(anyhow!("Invalid `output` in `llm` block, expecting `full` or `trimmed_completion_only`"))?
                         },
                         _ => Err(anyhow!("Unexpected `{}` in `llm` block", key))?,
 
@@ -256,6 +256,10 @@ impl Block for LLM {
         for s in self.stop.iter() {
             hasher.update(s.as_bytes());
         }
+        hasher.update(match self.output {
+            LLMOutput::Full => "full".as_bytes(),
+            LLMOutput::TrimmedCompletionOnly => "trimmed_completion_only".as_bytes(),
+        });
         format!("{}", hasher.finalize().to_hex())
     }
 
@@ -335,7 +339,7 @@ impl Block for LLM {
                 prompt: g.prompt,
                 completion: g.completions[0].clone(),
             })?),
-            LLMOutput::CompletionOnly => Ok(json!({ "completion": g.completions[0].text.clone()}))
+            LLMOutput::TrimmedCompletionOnly => Ok(json!({ "completion": g.completions[0].text.clone().trim()}))
         }
     }
 
