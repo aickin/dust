@@ -8,7 +8,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use pest::iterators::Pair;
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::str::FromStr;
 
 #[derive(Clone)]
@@ -20,6 +20,13 @@ pub struct LLM {
     max_tokens: i32,
     temperature: f32,
     stop: Vec<String>,
+    output: LLMOutput,
+}
+
+#[derive(Clone)]
+enum LLMOutput {
+    Full,
+    CompletionOnly,
 }
 
 impl LLM {
@@ -31,6 +38,7 @@ impl LLM {
         let mut max_tokens: Option<i32> = None;
         let mut temperature: Option<f32> = None;
         let mut stop: Vec<String> = vec![];
+        let mut output: LLMOutput = LLMOutput::Full;
 
         for pair in block_pair.into_inner() {
             match pair.as_rule() {
@@ -60,7 +68,13 @@ impl LLM {
                             ))?,
                         },
                         "stop" => stop = value.split("\n").map(|s| String::from(s)).collect(),
+                        "output" => output = match value.as_str() {
+                            "full" => LLMOutput::Full,
+                            "completion_only" => LLMOutput::CompletionOnly,
+                            _ => Err(anyhow!("Invalid `output` in `llm` block, expecting `full` or `completion_only`"))?
+                        },
                         _ => Err(anyhow!("Unexpected `{}` in `llm` block", key))?,
+
                     }
                 }
                 Rule::expected => Err(anyhow!("`expected` is not yet supported in `llm` block"))?,
@@ -83,6 +97,7 @@ impl LLM {
             max_tokens: max_tokens.unwrap(),
             temperature: temperature.unwrap(),
             stop,
+            output,
         })
     }
 
@@ -315,10 +330,13 @@ impl Block for LLM {
             .await?;
         assert!(g.completions.len() == 1);
 
-        Ok(serde_json::to_value(LLMValue {
-            prompt: g.prompt,
-            completion: g.completions[0].clone(),
-        })?)
+        match self.output {
+            LLMOutput::Full => Ok(serde_json::to_value(LLMValue {
+                prompt: g.prompt,
+                completion: g.completions[0].clone(),
+            })?),
+            LLMOutput::CompletionOnly => Ok(json!({ "completion": g.completions[0].text.clone()}))
+        }
     }
 
     fn clone_box(&self) -> Box<dyn Block + Sync + Send> {
