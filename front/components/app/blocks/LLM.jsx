@@ -68,6 +68,12 @@ export default function LLM({
     }
   };
 
+  const handleOutputChange = (outputMode) => {
+    let b = shallowBlockClone(block);
+    b.spec.output = outputMode;
+    onBlockUpdate(b);
+  };
+
   const handleModelChange = (model) => {
     let b = shallowBlockClone(block);
     b.config = model;
@@ -301,6 +307,26 @@ export default function LLM({
               value={block.spec.prompt}
               onChange={(e) => handlePromptChange(e.target.value)}
             />
+          </div>
+        </div>
+        <div className="flex flex-col space-y-1 text-sm font-medium text-gray-700 leading-8">
+          <div className="flex flex-initial items-center pt-2">
+            output :{" "}
+            <select
+              onChange={(e) => handleOutputChange(e.target.value)}
+              value={block.spec.output}
+              className={classNames(
+                "block pr-6 resize-none rounded-md px-1 font-normal text-sm py-1 font-mono bg-slate-100",
+                readOnly
+                  ? "border-white ring-0 focus:ring-0 focus:border-white"
+                  : "border-white focus:border-gray-300 focus:ring-0"
+              )}
+            >
+              <option value="full">Full Response (with logprobs)</option>
+              <option value="trimmed_completion_only">
+                Trimmed Completion Text Only
+              </option>
+            </select>
           </div>
         </div>
       </div>

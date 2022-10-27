@@ -98,7 +98,8 @@ export function addBlock(spec, blockType) {
           url: "",
           headers_code:
             '_fun = (env) => {\n  return {"Content-Type": "application/json"};\n}',
-          body_code: "_fun = (env) => {\n  // return a string or null to skip sending a body.\n  return JSON.stringify({ foo: \"bar\" });\n}",
+          body_code:
+            '_fun = (env) => {\n  // return a string or null to skip sending a body.\n  return JSON.stringify({ foo: "bar" });\n}',
         },
         config: {},
       });
@@ -116,6 +117,7 @@ export function addBlock(spec, blockType) {
           few_shot_prompt: "",
           prompt: "",
           stop: [],
+          output: "full",
         },
         config: {
           provider_id: "",
@@ -248,6 +250,9 @@ export function dumpSpecification(spec, latestDatasets) {
         }
         if (block.spec.stop && block.spec.stop.length > 0) {
           out += `  stop: \n\`\`\`\n${block.spec.stop.join("\n")}\n\`\`\`\n`;
+        }
+        if (block.spec.output) {
+          out += `  output: ${block.spec.output}\n`;
         }
         out += `}\n`;
         out += "\n";
